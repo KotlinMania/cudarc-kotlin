@@ -16,3 +16,13 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "cudarc-kotlin"
+
+listOf(
+    "../half-kotlin",
+    "../float8-kotlin",
+    "../thiserror-kotlin",
+).forEach { path ->
+    if (file(path).exists()) {
+        includeBuild(path)
+    }
+}
