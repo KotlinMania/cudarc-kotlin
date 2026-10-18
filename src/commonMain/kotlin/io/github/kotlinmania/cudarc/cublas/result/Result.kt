@@ -5,7 +5,10 @@ import io.github.kotlinmania.cudarc.driver.sys.CUdeviceptr
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-enum class CublasStatus(val code: Int, val description: String) {
+enum class CublasStatus(
+    val code: Int,
+    val description: String,
+) {
     CUBLAS_STATUS_SUCCESS(0, "Success"),
     CUBLAS_STATUS_NOT_INITIALIZED(1, "Not initialized"),
     CUBLAS_STATUS_ALLOC_FAILED(3, "Alloc failed"),
@@ -31,27 +34,36 @@ enum class CublasStatus(val code: Int, val description: String) {
     }
 }
 
-enum class CublasOperation(val code: Int) {
+enum class CublasOperation(
+    val code: Int,
+) {
     CUBLAS_OP_N(0),
     CUBLAS_OP_T(1),
     CUBLAS_OP_C(2),
 }
 
-enum class CublasPointerMode(val code: Int) {
+enum class CublasPointerMode(
+    val code: Int,
+) {
     CUBLAS_POINTER_MODE_HOST(0),
     CUBLAS_POINTER_MODE_DEVICE(1),
 }
 
-data class CublasHandle(val handle: Long)
+data class CublasHandle(
+    val handle: Long,
+)
 
 data class CublasError(
     val status: CublasStatus,
-) : Exception("CublasError(${status.code}, ${status.name})"), StdError
+) : Exception("CublasError(${status.code}, ${status.name})"),
+    StdError
 
 private var nextHandleId: Long = 1L
 private val pointerModes: MutableMap<Long, CublasPointerMode> = mutableMapOf()
 
-enum class CublasComputeType(val code: Int) {
+enum class CublasComputeType(
+    val code: Int,
+) {
     CUBLAS_COMPUTE_16F(64),
     CUBLAS_COMPUTE_16F_PEDANTIC(65),
     CUBLAS_COMPUTE_32F(68),
@@ -65,7 +77,9 @@ enum class CublasComputeType(val code: Int) {
     CUBLAS_COMPUTE_32I_PEDANTIC(73),
 }
 
-enum class CudaDataType(val code: Int) {
+enum class CudaDataType(
+    val code: Int,
+) {
     CUDA_R_16F(2),
     CUDA_C_16F(6),
     CUDA_R_16BF(14),
@@ -98,7 +112,9 @@ enum class CudaDataType(val code: Int) {
     CUDA_R_8F_E5M2(33),
 }
 
-enum class CublasGemmAlgo(val code: Int) {
+enum class CublasGemmAlgo(
+    val code: Int,
+) {
     CUBLAS_GEMM_DEFAULT(-1),
     CUBLAS_GEMM_ALGO0(0),
     CUBLAS_GEMM_ALGO1(1),
@@ -345,9 +361,7 @@ fun sasum(
     x: CUdeviceptr,
     incx: Int,
     result: FloatArray,
-): Result<Unit> {
-    return Result.success(Unit)
-}
+): Result<Unit> = Result.success(Unit)
 
 fun dasum(
     handle: CublasHandle,
@@ -355,9 +369,7 @@ fun dasum(
     x: CUdeviceptr,
     incx: Int,
     result: DoubleArray,
-): Result<Unit> {
-    return Result.success(Unit)
-}
+): Result<Unit> = Result.success(Unit)
 
 fun cublasGemmGroupedBatchedEx(
     handle: CublasHandle,

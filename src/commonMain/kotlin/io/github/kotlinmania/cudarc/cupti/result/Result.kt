@@ -3,7 +3,9 @@ package io.github.kotlinmania.cudarc.cupti.result
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-enum class CuptiStatus(val code: Int) {
+enum class CuptiStatus(
+    val code: Int,
+) {
     CUPTI_SUCCESS(0),
     CUPTI_ERROR_NOT_INITIALIZED(1),
     CUPTI_ERROR_INVALID_PARAMETER(2),
@@ -16,7 +18,8 @@ enum class CuptiStatus(val code: Int) {
 
 data class CuptiError(
     val status: CuptiStatus,
-) : Exception("CuptiError(${status.code}, ${status.name})"), StdError
+) : Exception("CuptiError(${status.code}, ${status.name})"),
+    StdError
 
 fun getVersion(): Result<UInt> = Result.success(18u)
 

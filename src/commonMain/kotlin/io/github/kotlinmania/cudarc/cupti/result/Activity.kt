@@ -3,7 +3,9 @@ package io.github.kotlinmania.cudarc.cupti.result
 
 import kotlin.Result
 
-enum class CuptiActivityKind(val code: Int) {
+enum class CuptiActivityKind(
+    val code: Int,
+) {
     CUPTI_ACTIVITY_KIND_INVALID(0),
     CUPTI_ACTIVITY_KIND_MEMCPY(1),
     CUPTI_ACTIVITY_KIND_MEMSET(2),

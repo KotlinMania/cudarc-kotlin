@@ -3,7 +3,6 @@ package io.github.kotlinmania.cudarc.cusolver.safe
 
 import io.github.kotlinmania.cudarc.cusolver.result.CusolverDnHandle
 import io.github.kotlinmania.cudarc.cusolver.result.CusolverDnParams
-import io.github.kotlinmania.cudarc.cusolver.result.CusolverError
 import io.github.kotlinmania.cudarc.cusolver.result.dnCreate
 import io.github.kotlinmania.cudarc.cusolver.result.dnCreateParams
 import io.github.kotlinmania.cudarc.cusolver.result.dnDestroy
@@ -14,7 +13,7 @@ import kotlin.Result
 
 class DnHandle(
     val handle: CusolverDnHandle,
-    var stream: CudaStream,
+    private var stream: CudaStream,
 ) {
     companion object {
         fun new(stream: CudaStream): Result<DnHandle> {

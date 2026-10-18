@@ -12,9 +12,11 @@ class UnifiedSlice<T> internal constructor(
     val stream: CudaStream,
     val event: CudaEvent,
     var attachMode: CUmemAttachFlags = CUmemAttachFlags.CU_MEM_ATTACH_GLOBAL,
-    val elements: MutableList<T> = mutableListOf(),
-) : DeviceSlice<T>, DevicePtr<T>, DevicePtrMut<T>, HostSlice<T> {
-
+    internal val elements: MutableList<T> = mutableListOf(),
+) : DeviceSlice<T>,
+    DevicePtr<T>,
+    DevicePtrMut<T>,
+    HostSlice<T> {
     override fun numBytes(): ULong = (len * 8).toULong()
 
     override fun devicePtr(stream: CudaStream): Pair<CUdeviceptr, CudaEvent?> =
@@ -26,12 +28,12 @@ class UnifiedSlice<T> internal constructor(
     override fun streamSyncedSlice(stream: CudaStream): Pair<List<T>, CudaEvent?> =
         Pair(elements, event)
 
-    override fun streamSyncedMutSlice(stream: CudaStream): Pair<MutableList<T>, CudaEvent?> =
+    override fun streamSyncedMutSlice(stream: CudaStream): Pair<List<T>, CudaEvent?> =
         Pair(elements, event)
 
     fun asSlice(): List<T> = elements
 
-    fun asMutSlice(): MutableList<T> = elements
+    fun asMutSlice(): List<T> = elements
 
     fun slice(range: IntRange): UnifiedView<T> {
         val start = range.first
@@ -54,7 +56,8 @@ class UnifiedView<T> internal constructor(
     val event: CudaEvent,
     val stream: CudaStream,
     val attachMode: CUmemAttachFlags,
-) : DeviceSlice<T>, DevicePtr<T> {
+) : DeviceSlice<T>,
+    DevicePtr<T> {
     override fun numBytes(): ULong = (len * 8).toULong()
 
     override fun devicePtr(stream: CudaStream): Pair<CUdeviceptr, CudaEvent?> =
@@ -67,7 +70,9 @@ class UnifiedViewMut<T> internal constructor(
     val event: CudaEvent,
     val stream: CudaStream,
     val attachMode: CUmemAttachFlags,
-) : DeviceSlice<T>, DevicePtr<T>, DevicePtrMut<T> {
+) : DeviceSlice<T>,
+    DevicePtr<T>,
+    DevicePtrMut<T> {
     override fun numBytes(): ULong = (len * 8).toULong()
 
     override fun devicePtr(stream: CudaStream): Pair<CUdeviceptr, CudaEvent?> =

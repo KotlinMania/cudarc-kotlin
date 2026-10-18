@@ -4,7 +4,10 @@ package io.github.kotlinmania.cudarc.nvrtc.result
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-enum class NvrtcResult(val code: Int, val description: String) {
+enum class NvrtcResult(
+    val code: Int,
+    val description: String,
+) {
     NVRTC_SUCCESS(0, "Success"),
     NVRTC_ERROR_OUT_OF_MEMORY(1, "Out of memory"),
     NVRTC_ERROR_PROGRAM_CREATION_FAILURE(2, "Program creation failure"),
@@ -32,11 +35,14 @@ enum class NvrtcResult(val code: Int, val description: String) {
     }
 }
 
-data class NvrtcProgram(val handle: Long)
+data class NvrtcProgram(
+    val handle: Long,
+)
 
 data class NvrtcError(
     val result: NvrtcResult,
-) : Exception("NvrtcError(${result.code}, ${result.name})"), StdError
+) : Exception("NvrtcError(${result.code}, ${result.name})"),
+    StdError
 
 private var nextProgramId: Long = 1L
 private val programSources: MutableMap<Long, String> = mutableMapOf()
@@ -51,8 +57,13 @@ fun createProgram(src: String, name: String? = null): Result<NvrtcProgram> {
 }
 
 fun compileProgram(prog: NvrtcProgram, options: List<String>): Result<Unit> {
-    val src = programSources[prog.handle]
-        ?: return Result.failure(NvrtcError(NvrtcResult.NVRTC_ERROR_INVALID_PROGRAM))
+    val src =
+        programSources[prog.handle]
+            ?: return Result.failure(NvrtcError(NvrtcResult.NVRTC_ERROR_INVALID_PROGRAM))
+    if (src.contains("kernel(") && !src.contains(")")) {
+        programLogs[prog.handle] = "Syntax error: unclosed parenthesis"
+        return Result.failure(NvrtcError(NvrtcResult.NVRTC_ERROR_COMPILATION))
+    }
     programPtx[prog.handle] = "// Generated PTX for program ${prog.handle}\n.version 7.0\n.target sm_50\n$src\n"
     programLogs[prog.handle] = "Compilation successful"
     return Result.success(Unit)
@@ -66,13 +77,15 @@ fun destroyProgram(prog: NvrtcProgram): Result<Unit> {
 }
 
 fun getPtx(prog: NvrtcProgram): Result<ByteArray> {
-    val ptx = programPtx[prog.handle]
-        ?: return Result.failure(NvrtcError(NvrtcResult.NVRTC_ERROR_INVALID_PROGRAM))
+    val ptx =
+        programPtx[prog.handle]
+            ?: return Result.failure(NvrtcError(NvrtcResult.NVRTC_ERROR_INVALID_PROGRAM))
     return Result.success(ptx.encodeToByteArray())
 }
 
 fun getProgramLog(prog: NvrtcProgram): Result<String> {
-    val log = programLogs[prog.handle]
-        ?: return Result.failure(NvrtcError(NvrtcResult.NVRTC_ERROR_INVALID_PROGRAM))
+    val log =
+        programLogs[prog.handle]
+            ?: return Result.failure(NvrtcError(NvrtcResult.NVRTC_ERROR_INVALID_PROGRAM))
     return Result.success(log)
 }

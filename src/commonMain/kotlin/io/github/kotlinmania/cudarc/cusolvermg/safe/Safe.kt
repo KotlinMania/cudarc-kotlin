@@ -2,7 +2,6 @@
 package io.github.kotlinmania.cudarc.cusolvermg.safe
 
 import io.github.kotlinmania.cudarc.cusolvermg.result.CudaLibMgGrid
-import io.github.kotlinmania.cudarc.cusolvermg.result.CusolverMgError
 import io.github.kotlinmania.cudarc.cusolvermg.result.CusolverMgGridMapping
 import io.github.kotlinmania.cudarc.cusolvermg.result.CusolverMgHandle
 import io.github.kotlinmania.cudarc.cusolvermg.result.mgCreate

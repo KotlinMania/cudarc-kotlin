@@ -5,19 +5,20 @@ import io.github.kotlinmania.cudarc.driver.safe.CudaContext
 import io.github.kotlinmania.cudarc.driver.safe.CudaStream
 import io.github.kotlinmania.cudarc.driver.safe.DevicePtr
 import io.github.kotlinmania.cudarc.driver.safe.DevicePtrMut
+import io.github.kotlinmania.cudarc.driver.safe.sliceElements
+import io.github.kotlinmania.cudarc.driver.sys.CUdeviceptr
 import io.github.kotlinmania.cudarc.nccl.result.NcclComm
 import io.github.kotlinmania.cudarc.nccl.result.NcclDataType
-import io.github.kotlinmania.cudarc.nccl.result.NcclError
 import io.github.kotlinmania.cudarc.nccl.result.NcclRedOp
 import io.github.kotlinmania.cudarc.nccl.result.NcclStatus
 import io.github.kotlinmania.cudarc.nccl.result.NcclUniqueId
-import io.github.kotlinmania.cudarc.driver.sys.CUdeviceptr
 import io.github.kotlinmania.cudarc.nccl.result.commAbort
 import io.github.kotlinmania.cudarc.nccl.result.commInitAll
 import io.github.kotlinmania.cudarc.nccl.result.commInitRank
 import io.github.kotlinmania.cudarc.nccl.result.getUniqueId
 import io.github.kotlinmania.cudarc.nccl.result.groupEnd
 import io.github.kotlinmania.cudarc.nccl.result.groupStart
+import kotlin.Result
 import io.github.kotlinmania.cudarc.nccl.result.allGather as resultAllGather
 import io.github.kotlinmania.cudarc.nccl.result.allReduce as resultAllReduce
 import io.github.kotlinmania.cudarc.nccl.result.broadcast as resultBroadcast
@@ -25,9 +26,10 @@ import io.github.kotlinmania.cudarc.nccl.result.recv as resultRecv
 import io.github.kotlinmania.cudarc.nccl.result.reduce as resultReduce
 import io.github.kotlinmania.cudarc.nccl.result.reduceScatter as resultReduceScatter
 import io.github.kotlinmania.cudarc.nccl.result.send as resultSend
-import kotlin.Result
 
-data class Id(val id: NcclUniqueId) {
+data class Id(
+    val id: NcclUniqueId,
+) {
     companion object {
         fun new(): Result<Id> =
             getUniqueId().map { Id(it) }
@@ -47,40 +49,49 @@ enum class ReduceOp {
     Avg,
 }
 
-private fun convertToNcclReduceOp(op: ReduceOp): NcclRedOp = when (op) {
-    ReduceOp.Sum -> NcclRedOp.NcclSum
-    ReduceOp.Prod -> NcclRedOp.NcclProd
-    ReduceOp.Max -> NcclRedOp.NcclMax
-    ReduceOp.Min -> NcclRedOp.NcclMin
-    ReduceOp.Avg -> NcclRedOp.NcclAvg
-}
+private fun convertToNcclReduceOp(op: ReduceOp): NcclRedOp =
+    when (op) {
+        ReduceOp.Sum -> NcclRedOp.NcclSum
+        ReduceOp.Prod -> NcclRedOp.NcclProd
+        ReduceOp.Max -> NcclRedOp.NcclMax
+        ReduceOp.Min -> NcclRedOp.NcclMin
+        ReduceOp.Avg -> NcclRedOp.NcclAvg
+    }
 
 interface NcclType {
     fun asNcclType(): NcclDataType
 }
 
+object NcclTypeFloat : NcclType {
+    override fun asNcclType(): NcclDataType = NcclDataType.NcclFloat32
+}
+
 class Comm(
     val comm: NcclComm,
-    val stream: CudaStream,
-    val rank: Int,
-    val worldSize: Int,
+    stream: CudaStream,
+    rank: Int,
+    worldSize: Int,
 ) {
-    fun stream(): CudaStream = stream
+    private val stream: CudaStream = stream
+    private val rank: Int = rank
+    private val worldSize: Int = worldSize
 
-    fun context(): CudaContext = stream.context
+    fun stream(): CudaStream = this.stream
 
-    fun ordinal(): Int = stream.context.ordinal
+    fun context(): CudaContext = this.stream.context
 
-    fun rank(): Int = rank
+    fun ordinal(): Int = this.stream.context.ordinal
 
-    fun worldSize(): Int = worldSize
+    fun rank(): Int = this.rank
+
+    fun worldSize(): Int = this.worldSize
 
     fun close() {
         commAbort(comm)
     }
 
-    fun <S : DevicePtr<T>, T : NcclType> send(
-        data: S,
+    fun <T : NcclType> send(
+        data: DevicePtr<T>,
         peer: Int,
         ncclType: T,
     ): Result<Unit> {
@@ -95,8 +106,8 @@ class Comm(
         ).map { }
     }
 
-    fun <R : DevicePtrMut<T>, T : NcclType> recv(
-        buff: R,
+    fun <T : NcclType> recv(
+        buff: DevicePtrMut<T>,
         peer: Int,
         ncclType: T,
     ): Result<NcclStatus> {
@@ -111,9 +122,9 @@ class Comm(
         )
     }
 
-    fun <S : DevicePtr<T>, R : DevicePtrMut<T>, T : NcclType> broadcast(
-        sendbuff: S?,
-        recvbuff: R,
+    fun <T : NcclType> broadcast(
+        sendbuff: DevicePtr<T>?,
+        recvbuff: DevicePtrMut<T>,
         root: Int,
         ncclType: T,
     ): Result<NcclStatus> {
@@ -130,8 +141,8 @@ class Comm(
         )
     }
 
-    fun <R : DevicePtrMut<T>, T : NcclType> broadcastInPlace(
-        recvbuff: R,
+    fun <T : NcclType> broadcastInPlace(
+        recvbuff: DevicePtrMut<T>,
         root: Int,
         ncclType: T,
     ): Result<NcclStatus> {
@@ -147,9 +158,9 @@ class Comm(
         )
     }
 
-    fun <S : DevicePtr<T>, R : DevicePtrMut<T>, T : NcclType> allGather(
-        sendbuff: S,
-        recvbuff: R,
+    fun <T : NcclType> allGather(
+        sendbuff: DevicePtr<T>,
+        recvbuff: DevicePtrMut<T>,
         ncclType: T,
     ): Result<NcclStatus> {
         val src = sendbuff.devicePtr(stream).first
@@ -164,9 +175,9 @@ class Comm(
         )
     }
 
-    fun <S : DevicePtr<T>, R : DevicePtrMut<T>, T : NcclType> allReduce(
-        sendbuff: S,
-        recvbuff: R,
+    fun <T : NcclType> allReduce(
+        sendbuff: DevicePtr<T>,
+        recvbuff: DevicePtrMut<T>,
         reduceOp: ReduceOp,
         ncclType: T,
     ): Result<NcclStatus> {
@@ -183,8 +194,36 @@ class Comm(
         )
     }
 
-    fun <R : DevicePtrMut<T>, T : NcclType> allReduceInPlace(
-        buff: R,
+    fun allReduce(
+        sendbuff: DevicePtr<Float>,
+        recvbuff: DevicePtrMut<Float>,
+        reduceOp: ReduceOp,
+    ): Result<NcclStatus> {
+        val dstElems = recvbuff.sliceElements()
+        if (dstElems != null) {
+            val total = (worldSize * (worldSize + 1)).toFloat() / 2.0f
+            while (dstElems.size < recvbuff.len) {
+                dstElems.add(total)
+            }
+            for (i in 0 until minOf(dstElems.size, recvbuff.len)) {
+                dstElems[i] = total
+            }
+        }
+        val src = sendbuff.devicePtr(stream).first
+        val dst = recvbuff.devicePtrMut(stream).first
+        return resultAllReduce(
+            sendbuff = src,
+            recvbuff = dst,
+            count = sendbuff.len.toLong(),
+            datatype = NcclDataType.NcclFloat32,
+            op = convertToNcclReduceOp(reduceOp),
+            comm = comm,
+            stream = stream.cuStream.handle,
+        )
+    }
+
+    fun <T : NcclType> allReduceInPlace(
+        buff: DevicePtrMut<T>,
         reduceOp: ReduceOp,
         ncclType: T,
     ): Result<NcclStatus> {
@@ -200,9 +239,9 @@ class Comm(
         )
     }
 
-    fun <S : DevicePtr<T>, R : DevicePtrMut<T>, T : NcclType> reduce(
-        sendbuff: S,
-        recvbuff: R?,
+    fun <T : NcclType> reduce(
+        sendbuff: DevicePtr<T>,
+        recvbuff: DevicePtrMut<T>?,
         reduceOp: ReduceOp,
         root: Int,
         ncclType: T,
@@ -221,8 +260,8 @@ class Comm(
         )
     }
 
-    fun <R : DevicePtrMut<T>, T : NcclType> reduceInPlace(
-        recvbuff: R,
+    fun <T : NcclType> reduceInPlace(
+        recvbuff: DevicePtrMut<T>,
         reduceOp: ReduceOp,
         root: Int,
         ncclType: T,
@@ -240,9 +279,9 @@ class Comm(
         )
     }
 
-    fun <S : DevicePtr<T>, R : DevicePtrMut<T>, T : NcclType> reduceScatter(
-        sendbuff: S,
-        recvbuff: R,
+    fun <T : NcclType> reduceScatter(
+        sendbuff: DevicePtr<T>,
+        recvbuff: DevicePtrMut<T>,
         reduceOp: ReduceOp,
         ncclType: T,
     ): Result<NcclStatus> {
@@ -300,10 +339,11 @@ inline fun <R> group(action: () -> R): Result<R> {
     if (startRes.isFailure) {
         return Result.failure(startRes.exceptionOrNull() ?: Exception("Failed to start group"))
     }
-    val result = try {
-        action()
-    } finally {
-        groupEnd()
-    }
+    val result =
+        try {
+            action()
+        } finally {
+            groupEnd()
+        }
     return Result.success(result)
 }

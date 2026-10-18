@@ -1,7 +1,6 @@
 // port-lint: source driver/safe/external_memory.rs
 package io.github.kotlinmania.cudarc.driver.safe
 
-import io.github.kotlinmania.cudarc.driver.result.DriverError
 import io.github.kotlinmania.cudarc.driver.result.malloc
 import io.github.kotlinmania.cudarc.driver.sys.CUdeviceptr
 import kotlin.Result
@@ -29,7 +28,8 @@ class MappedBuffer internal constructor(
     val externalMemory: ExternalMemory,
     val event: CudaEvent,
     val stream: CudaStream,
-) : DeviceSlice<UByte>, DevicePtr<UByte> {
+) : DeviceSlice<UByte>,
+    DevicePtr<UByte> {
     override fun numBytes(): ULong = len.toULong()
 
     override fun devicePtr(stream: CudaStream): Pair<CUdeviceptr, CudaEvent?> =

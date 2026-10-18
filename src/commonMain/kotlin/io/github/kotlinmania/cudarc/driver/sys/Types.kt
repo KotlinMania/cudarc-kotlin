@@ -1,6 +1,9 @@
 package io.github.kotlinmania.cudarc.driver.sys
 
-enum class CUresult(val code: Int, val description: String) {
+enum class CUresult(
+    val code: Int,
+    val description: String,
+) {
     CUDA_SUCCESS(0, "Success"),
     CUDA_ERROR_INVALID_VALUE(1, "Invalid value"),
     CUDA_ERROR_OUT_OF_MEMORY(2, "Out of memory"),
@@ -94,59 +97,84 @@ enum class CUresult(val code: Int, val description: String) {
     }
 }
 
-data class CUdevice(val handle: Int)
+data class CUdevice(
+    val handle: Int,
+)
 
-data class CUcontext(val handle: Long) {
+data class CUcontext(
+    val handle: Long,
+) {
     fun isNull(): Boolean = handle == 0L
+
     companion object {
         val NULL = CUcontext(0L)
     }
 }
 
-data class CUstream(val handle: Long) {
+data class CUstream(
+    val handle: Long,
+) {
     fun isNull(): Boolean = handle == 0L
+
     companion object {
         val NULL = CUstream(0L)
         val PER_THREAD = CUstream(2L)
     }
 }
 
-data class CUevent(val handle: Long) {
+data class CUevent(
+    val handle: Long,
+) {
     fun isNull(): Boolean = handle == 0L
+
     companion object {
         val NULL = CUevent(0L)
     }
 }
 
-data class CUfunction(val handle: Long) {
+data class CUfunction(
+    val handle: Long,
+) {
     fun isNull(): Boolean = handle == 0L
+
     companion object {
         val NULL = CUfunction(0L)
     }
 }
 
-data class CUmodule(val handle: Long) {
+data class CUmodule(
+    val handle: Long,
+) {
     fun isNull(): Boolean = handle == 0L
+
     companion object {
         val NULL = CUmodule(0L)
     }
 }
 
-data class CUdeviceptr(val handle: ULong) {
+data class CUdeviceptr(
+    val handle: ULong,
+) {
     fun isNull(): Boolean = handle == 0uL
+
     companion object {
         val NULL = CUdeviceptr(0uL)
     }
 }
 
-data class CUmemoryPool(val handle: Long) {
+data class CUmemoryPool(
+    val handle: Long,
+) {
     fun isNull(): Boolean = handle == 0L
+
     companion object {
         val NULL = CUmemoryPool(0L)
     }
 }
 
-data class CUuuid(val bytes: ByteArray) {
+data class CUuuid(
+    val bytes: ByteArray,
+) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CUuuid) return false
@@ -156,42 +184,56 @@ data class CUuuid(val bytes: ByteArray) {
     override fun hashCode(): Int = bytes.contentHashCode()
 }
 
-enum class CUstreamCaptureStatus(val code: Int) {
+enum class CUstreamCaptureStatus(
+    val code: Int,
+) {
     CU_STREAM_CAPTURE_STATUS_NONE(0),
     CU_STREAM_CAPTURE_STATUS_ACTIVE(1),
     CU_STREAM_CAPTURE_STATUS_INVALIDATED(2),
 }
 
-enum class CUstreamCaptureMode(val code: Int) {
+enum class CUstreamCaptureMode(
+    val code: Int,
+) {
     CU_STREAM_CAPTURE_MODE_GLOBAL(0),
     CU_STREAM_CAPTURE_MODE_THREAD_LOCAL(1),
     CU_STREAM_CAPTURE_MODE_RELAXED(2),
 }
 
-enum class CUstreamFlags(val value: UInt) {
+enum class CUstreamFlags(
+    val value: UInt,
+) {
     CU_STREAM_DEFAULT(0u),
     CU_STREAM_NON_BLOCKING(1u),
 }
 
-enum class CUeventFlags(val value: UInt) {
+enum class CUeventFlags(
+    val value: UInt,
+) {
     CU_EVENT_DEFAULT(0u),
     CU_EVENT_BLOCKING_SYNC(1u),
     CU_EVENT_DISABLE_TIMING(2u),
     CU_EVENT_INTERPROCESS(4u),
 }
 
-enum class CUeventWaitFlags(val value: UInt) {
+enum class CUeventWaitFlags(
+    val value: UInt,
+) {
     CU_EVENT_WAIT_DEFAULT(0u),
     CU_EVENT_WAIT_EXTERNAL(1u),
 }
 
-enum class CUmemAttachFlags(val value: UInt) {
+enum class CUmemAttachFlags(
+    val value: UInt,
+) {
     CU_MEM_ATTACH_GLOBAL(1u),
     CU_MEM_ATTACH_HOST(2u),
     CU_MEM_ATTACH_SINGLE(4u),
 }
 
-enum class CUctxFlags(val value: UInt) {
+enum class CUctxFlags(
+    val value: UInt,
+) {
     CU_CTX_SCHED_AUTO(0u),
     CU_CTX_SCHED_SPIN(1u),
     CU_CTX_SCHED_YIELD(2u),
@@ -200,7 +242,9 @@ enum class CUctxFlags(val value: UInt) {
     CU_CTX_LMEM_RESIZE_TO_MAX(16u),
 }
 
-enum class CUlimit(val code: Int) {
+enum class CUlimit(
+    val code: Int,
+) {
     CU_LIMIT_STACK_SIZE(0),
     CU_LIMIT_PRINTF_FIFO_SIZE(1),
     CU_LIMIT_MALLOC_HEAP_SIZE(2),
@@ -210,14 +254,18 @@ enum class CUlimit(val code: Int) {
     CU_LIMIT_PERSISTING_L2_CACHE_SIZE(6),
 }
 
-enum class CUfuncCache(val code: Int) {
+enum class CUfuncCache(
+    val code: Int,
+) {
     CU_FUNC_CACHE_PREFER_NONE(0),
     CU_FUNC_CACHE_PREFER_SHARED(1),
     CU_FUNC_CACHE_PREFER_L1(2),
     CU_FUNC_CACHE_PREFER_EQUAL(3),
 }
 
-enum class CUfunctionAttribute(val code: Int) {
+enum class CUfunctionAttribute(
+    val code: Int,
+) {
     CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK(0),
     CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES(1),
     CU_FUNC_ATTRIBUTE_CONST_SIZE_BYTES(2),
@@ -229,7 +277,9 @@ enum class CUfunctionAttribute(val code: Int) {
     CU_FUNC_ATTRIBUTE_PREFERRED_SHARED_MEMORY_CARVEOUT(8),
 }
 
-enum class CUdeviceAttribute(val code: Int) {
+enum class CUdeviceAttribute(
+    val code: Int,
+) {
     CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK(1),
     CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X(2),
     CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y(3),
@@ -267,7 +317,9 @@ enum class CUdeviceAttribute(val code: Int) {
     CU_DEVICE_ATTRIBUTE_MEMORY_POOLS_SUPPORTED(115),
 }
 
-enum class CUmemPoolAttribute(val code: Int) {
+enum class CUmemPoolAttribute(
+    val code: Int,
+) {
     CU_MEMPOOL_ATTR_REUSE_FOLLOW_EVENT_DEPENDENCIES(1),
     CU_MEMPOOL_ATTR_REUSE_ALLOW_OPPORTUNISTIC(2),
     CU_MEMPOOL_ATTR_REUSE_ALLOW_INTERNAL_DEPENDENCIES(3),
@@ -278,7 +330,9 @@ enum class CUmemPoolAttribute(val code: Int) {
     CU_MEMPOOL_ATTR_USED_MEM_HIGH(8),
 }
 
-enum class CUmemAccessFlags(val code: Int) {
+enum class CUmemAccessFlags(
+    val code: Int,
+) {
     CU_MEM_ACCESS_FLAGS_PROT_NONE(0),
     CU_MEM_ACCESS_FLAGS_PROT_READ(1),
     CU_MEM_ACCESS_FLAGS_PROT_READWRITE(3),

@@ -7,12 +7,20 @@ import kotlin.Result
 
 data class CusolverMgError(
     val status: CusolverStatus,
-) : Exception("CusolverMgError(${status.code}, ${status.name})"), StdError
+) : Exception("CusolverMgError(${status.code}, ${status.name})"),
+    StdError
 
-data class CusolverMgHandle(val handle: Long)
-data class CudaLibMgGrid(val handle: Long)
+data class CusolverMgHandle(
+    val handle: Long,
+)
 
-enum class CusolverMgGridMapping(val code: Int) {
+data class CudaLibMgGrid(
+    val handle: Long,
+)
+
+enum class CusolverMgGridMapping(
+    val code: Int,
+) {
     CUDALIBMG_GRID_MAPPING_COL_MAJOR(0),
     CUDALIBMG_GRID_MAPPING_ROW_MAJOR(1),
 }

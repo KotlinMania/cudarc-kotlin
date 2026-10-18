@@ -1,7 +1,6 @@
 // port-lint: source cudnn/safe/reduce.rs
 package io.github.kotlinmania.cudarc.cudnn.safe
 
-import io.github.kotlinmania.cudarc.cudnn.result.CudnnError
 import io.github.kotlinmania.cudarc.cudnn.result.CudnnIndicesType
 import io.github.kotlinmania.cudarc.cudnn.result.CudnnNanPropagation
 import io.github.kotlinmania.cudarc.cudnn.result.CudnnReduceTensorDescriptor
@@ -10,12 +9,11 @@ import io.github.kotlinmania.cudarc.cudnn.result.CudnnReduceTensorOp
 import io.github.kotlinmania.cudarc.cudnn.result.createReduceTensorDescriptor
 import io.github.kotlinmania.cudarc.cudnn.result.destroyReduceTensorDescriptor
 import io.github.kotlinmania.cudarc.cudnn.result.setReduceTensorDescriptor
-import io.github.kotlinmania.cudarc.driver.safe.DevicePtr
-import io.github.kotlinmania.cudarc.driver.safe.DevicePtrMut
 import io.github.kotlinmania.cudarc.flatMap
 import kotlin.Result
 
 object FlatIndices
+
 object NoIndices
 
 data class ReductionDescriptor<T, Idx>(

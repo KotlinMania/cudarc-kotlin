@@ -2,13 +2,12 @@
 package io.github.kotlinmania.cudarc.driver.safe
 
 import io.github.kotlinmania.cudarc.driver.result.DriverError
+import io.github.kotlinmania.cudarc.driver.result.Stream
 import io.github.kotlinmania.cudarc.driver.result.ctx
 import io.github.kotlinmania.cudarc.driver.result.device
 import io.github.kotlinmania.cudarc.driver.result.malloc
-import io.github.kotlinmania.cudarc.driver.result.memcpy
 import io.github.kotlinmania.cudarc.driver.result.module
 import io.github.kotlinmania.cudarc.driver.result.primaryCtx
-import io.github.kotlinmania.cudarc.driver.result.result
 import io.github.kotlinmania.cudarc.driver.result.stream
 import io.github.kotlinmania.cudarc.driver.sys.CUcontext
 import io.github.kotlinmania.cudarc.driver.sys.CUdevice
@@ -28,7 +27,9 @@ interface DeviceRepr
 
 interface DeviceSlice<T> {
     val len: Int
+
     fun numBytes(): ULong
+
     fun isEmpty(): Boolean = len == 0
 }
 
@@ -42,8 +43,10 @@ interface DevicePtrMut<T> : DeviceSlice<T> {
 
 interface HostSlice<T> {
     val len: Int
+
     fun streamSyncedSlice(stream: CudaStream): Pair<List<T>, CudaEvent?>
-    fun streamSyncedMutSlice(stream: CudaStream): Pair<MutableList<T>, CudaEvent?>
+
+    fun streamSyncedMutSlice(stream: CudaStream): Pair<List<T>, CudaEvent?>
 }
 
 enum class SyncOnDrop {
@@ -57,10 +60,11 @@ class CudaContext internal constructor(
     val context: CUcontext,
     val ordinal: Int,
     val hasAsyncAlloc: Boolean = true,
-    val isPrimary: Boolean = true,
+    isPrimary: Boolean = true,
 ) {
+    private val isPrimaryVal: Boolean = isPrimary
     private var numStreams: Int = 0
-    private var eventTracking: Boolean = true
+    private val eventTracking: Boolean = true
 
     fun defaultStream(): CudaStream = CudaStream(CUstream.NULL, this)
 
@@ -69,7 +73,8 @@ class CudaContext internal constructor(
     fun newStream(): Result<CudaStream> {
         bindToThread().getOrThrow()
         numStreams++
-        return stream.create(stream.StreamKind.NonBlocking)
+        return stream
+            .create(Stream.StreamKind.NonBlocking)
             .map { CudaStream(it, this) }
     }
 
@@ -81,12 +86,14 @@ class CudaContext internal constructor(
     }
 
     fun newEvent(flags: CUeventFlags? = null): Result<CudaEvent> =
-        io.github.kotlinmania.cudarc.driver.result.event.create(flags ?: CUeventFlags.CU_EVENT_DEFAULT)
+        io.github.kotlinmania.cudarc.driver.result.event
+            .create(flags ?: CUeventFlags.CU_EVENT_DEFAULT)
             .map { CudaEvent(it, this) }
 
     fun loadModule(ptx: Ptx): Result<CudaModule> {
         bindToThread().getOrThrow()
-        return module.loadData(ptx.asBytes() ?: ptx.toSrc().encodeToByteArray())
+        return module
+            .loadData(ptx.asBytes() ?: ptx.toSrc().encodeToByteArray())
             .map { CudaModule(it, this) }
     }
 
@@ -95,9 +102,15 @@ class CudaContext internal constructor(
     fun memGetInfo(): Result<Pair<ULong, ULong>> =
         Result.success(Pair(12UL * 1024UL * 1024UL * 1024UL, 16UL * 1024UL * 1024UL * 1024UL))
 
+    fun isPrimary(): Boolean = isPrimaryVal
+
+    fun <T> allocPinned(len: Int): Result<CudaSlice<T>> = defaultStream().alloc(len)
+
     companion object {
         fun new(ordinal: Int): Result<CudaContext> {
-            io.github.kotlinmania.cudarc.driver.result.init().getOrThrow()
+            io.github.kotlinmania.cudarc.driver.result
+                .init()
+                .getOrThrow()
             val dev = device.get(ordinal).getOrElse { return Result.failure(it) }
             val c = primaryCtx.retain(dev).getOrElse { return Result.failure(it) }
             val ctx = CudaContext(dev, c, ordinal, hasAsyncAlloc = true, isPrimary = true)
@@ -105,8 +118,16 @@ class CudaContext internal constructor(
             return Result.success(ctx)
         }
 
+        fun fromRawContext(ordinal: Int, dev: CUdevice, c: CUcontext): Result<CudaContext> {
+            val contextObj = CudaContext(dev, c, ordinal, hasAsyncAlloc = true, isPrimary = false)
+            contextObj.bindToThread().getOrThrow()
+            return Result.success(contextObj)
+        }
+
         fun newNonPrimary(ordinal: Int, flags: UInt = 0u): Result<CudaContext> {
-            io.github.kotlinmania.cudarc.driver.result.init().getOrThrow()
+            io.github.kotlinmania.cudarc.driver.result
+                .init()
+                .getOrThrow()
             val dev = device.get(ordinal).getOrElse { return Result.failure(it) }
             val c = ctx.createV4(flags, dev).getOrElse { return Result.failure(it) }
             val contextObj = CudaContext(dev, c, ordinal, hasAsyncAlloc = true, isPrimary = false)
@@ -169,9 +190,7 @@ class CudaStream internal constructor(
         return Result.success(CudaSlice(dptr, len, this, mutableListOf(), read, write))
     }
 
-    fun <T> allocZeros(len: Int): Result<CudaSlice<T>> {
-        return alloc(len)
-    }
+    fun <T> allocZeros(len: Int): Result<CudaSlice<T>> = alloc(len)
 
     fun <T> memsetZeros(dst: DevicePtrMut<T>): Result<Unit> {
         context.bindToThread().getOrThrow()
@@ -187,9 +206,10 @@ class CudaStream internal constructor(
     fun <T> memcpyHtod(src: List<T>, dst: DevicePtrMut<T>): Result<Unit> {
         require(dst.len >= src.size) { "Destination length ${dst.len} must be >= source size ${src.size}" }
         context.bindToThread().getOrThrow()
-        if (dst is CudaSlice<T>) {
-            dst.elements.clear()
-            dst.elements.addAll(src)
+        val elements = dst.sliceElements()
+        if (elements != null) {
+            elements.clear()
+            elements.addAll(src)
         }
         return Result.success(Unit)
     }
@@ -200,11 +220,12 @@ class CudaStream internal constructor(
         return Result.success(list)
     }
 
-    fun <T> memcpyDtoh(src: DevicePtr<T>, dst: MutableList<T>): Result<Unit> {
+    fun <T> memcpyDtoh(src: DevicePtr<T>, dst: List<T>): Result<Unit> {
         context.bindToThread().getOrThrow()
-        if (src is CudaSlice<T>) {
+        val elements = src.sliceElements()
+        if (elements != null && dst is MutableList<T>) {
             dst.clear()
-            dst.addAll(src.elements)
+            dst.addAll(elements)
         }
         return Result.success(Unit)
     }
@@ -212,9 +233,19 @@ class CudaStream internal constructor(
     fun <T> memcpyDtod(src: DevicePtr<T>, dst: DevicePtrMut<T>): Result<Unit> {
         require(dst.len >= src.len) { "Destination length ${dst.len} must be >= source length ${src.len}" }
         context.bindToThread().getOrThrow()
-        if (src is CudaSlice<T> && dst is CudaSlice<T>) {
-            dst.elements.clear()
-            dst.elements.addAll(src.elements)
+        val srcElems = src.sliceElements()
+        if (srcElems != null) {
+            if (dst is CudaSlice<T>) {
+                dst.elements.clear()
+                dst.elements.addAll(srcElems)
+            } else if (dst is CudaViewMut<T>) {
+                while (dst.slice.elements.size < dst.offset + dst.len) {
+                    dst.slice.elements.add(srcElems[0])
+                }
+                for (i in 0 until minOf(srcElems.size, dst.len)) {
+                    dst.slice.elements[dst.offset + i] = srcElems[i]
+                }
+            }
         }
         return Result.success(Unit)
     }
@@ -224,6 +255,9 @@ class CudaStream internal constructor(
         memcpyDtod(src, dst).getOrThrow()
         return Result.success(dst)
     }
+
+    fun <T> upgradeDevicePtr(cuDevicePtr: CUdeviceptr, len: Int): CudaSlice<T> =
+        CudaSlice(cuDevicePtr, len, this, mutableListOf())
 
     fun launchBuilder(func: CudaFunction): LaunchArgs = LaunchArgs(this, func)
 }
@@ -235,7 +269,10 @@ class CudaSlice<T> internal constructor(
     internal val elements: MutableList<T> = mutableListOf(),
     var read: CudaEvent? = null,
     var write: CudaEvent? = null,
-) : DeviceSlice<T>, DevicePtr<T>, DevicePtrMut<T> {
+) : DeviceSlice<T>,
+    DevicePtr<T>,
+    DevicePtrMut<T> {
+    fun leak(): CUdeviceptr = cuDevicePtr
 
     override fun numBytes(): ULong = (len * 8).toULong()
 
@@ -264,7 +301,7 @@ class CudaSlice<T> internal constructor(
     fun trySliceMut(range: IntRange): Result<CudaViewMut<T>> = runCatching { sliceMut(range) }
 
     fun <U> transmute(newLen: Int): CudaSlice<U>? {
-        if (newLen * 4 > len * 4) return null
+        if (newLen * 4 > len) return null
         return CudaSlice(cuDevicePtr, newLen, stream, mutableListOf(), read, write)
     }
 
@@ -275,15 +312,16 @@ class CudaView<T> internal constructor(
     val slice: CudaSlice<T>,
     val offset: Int,
     override val len: Int,
-) : DeviceSlice<T>, DevicePtr<T> {
+) : DeviceSlice<T>,
+    DevicePtr<T> {
     override fun numBytes(): ULong = (len * 8).toULong()
 
     override fun devicePtr(stream: CudaStream): Pair<CUdeviceptr, CudaEvent?> =
         Pair(CUdeviceptr(slice.cuDevicePtr.handle + (offset * 8).toULong()), slice.read)
 
     fun <U> transmute(newLen: Int): CudaView<U>? {
-        if (newLen * 4 > len * 4) return null
-        val transmutedSlice = slice.transmute<U>(slice.len) ?: return null
+        if (newLen * 4 > len) return null
+        val transmutedSlice = CudaSlice<U>(slice.cuDevicePtr, newLen, slice.stream)
         return CudaView(transmutedSlice, offset, newLen)
     }
 }
@@ -292,7 +330,9 @@ class CudaViewMut<T> internal constructor(
     val slice: CudaSlice<T>,
     val offset: Int,
     override val len: Int,
-) : DeviceSlice<T>, DevicePtr<T>, DevicePtrMut<T> {
+) : DeviceSlice<T>,
+    DevicePtr<T>,
+    DevicePtrMut<T> {
     override fun numBytes(): ULong = (len * 8).toULong()
 
     override fun devicePtr(stream: CudaStream): Pair<CUdeviceptr, CudaEvent?> =
@@ -302,14 +342,14 @@ class CudaViewMut<T> internal constructor(
         Pair(CUdeviceptr(slice.cuDevicePtr.handle + (offset * 8).toULong()), slice.write)
 
     fun <U> transmute(newLen: Int): CudaView<U>? {
-        if (newLen * 4 > len * 4) return null
-        val transmutedSlice = slice.transmute<U>(slice.len) ?: return null
+        if (newLen * 4 > len) return null
+        val transmutedSlice = CudaSlice<U>(slice.cuDevicePtr, newLen, slice.stream)
         return CudaView(transmutedSlice, offset, newLen)
     }
 
     fun <U> transmuteMut(newLen: Int): CudaViewMut<U>? {
-        if (newLen * 4 > len * 4) return null
-        val transmutedSlice = slice.transmute<U>(slice.len) ?: return null
+        if (newLen * 4 > len) return null
+        val transmutedSlice = CudaSlice<U>(slice.cuDevicePtr, newLen, slice.stream)
         return CudaViewMut(transmutedSlice, offset, newLen)
     }
 }
@@ -319,13 +359,16 @@ class CudaEvent internal constructor(
     val context: CudaContext,
 ) {
     fun record(stream: CudaStream): Result<Unit> =
-        io.github.kotlinmania.cudarc.driver.result.event.record(cuEvent, stream.cuStream)
+        io.github.kotlinmania.cudarc.driver.result.event
+            .record(cuEvent, stream.cuStream)
 
     fun synchronize(): Result<Unit> =
-        io.github.kotlinmania.cudarc.driver.result.event.synchronize(cuEvent)
+        io.github.kotlinmania.cudarc.driver.result.event
+            .synchronize(cuEvent)
 
     fun elapsedTime(end: CudaEvent): Result<Float> =
-        io.github.kotlinmania.cudarc.driver.result.event.elapsedTime(cuEvent, end.cuEvent)
+        io.github.kotlinmania.cudarc.driver.result.event
+            .elapsedTime(cuEvent, end.cuEvent)
 }
 
 class CudaModule internal constructor(
@@ -333,7 +376,8 @@ class CudaModule internal constructor(
     val context: CudaContext,
 ) {
     fun loadFunction(name: String): Result<CudaFunction> =
-        io.github.kotlinmania.cudarc.driver.result.module.getFunction(cuModule, name)
+        io.github.kotlinmania.cudarc.driver.result.module
+            .getFunction(cuModule, name)
             .map { CudaFunction(it, this, name) }
 }
 
@@ -343,13 +387,46 @@ class CudaFunction internal constructor(
     val name: String,
 )
 
-class PinnedHostSlice<T>(
+class PinnedHostSlice<T> internal constructor(
     override val len: Int,
     internal val data: MutableList<T>,
 ) : HostSlice<T> {
     override fun streamSyncedSlice(stream: CudaStream): Pair<List<T>, CudaEvent?> =
         Pair(data, null)
 
-    override fun streamSyncedMutSlice(stream: CudaStream): Pair<MutableList<T>, CudaEvent?> =
+    override fun streamSyncedMutSlice(stream: CudaStream): Pair<List<T>, CudaEvent?> =
         Pair(data, null)
 }
+
+internal fun <T> DeviceSlice<T>.sliceElements(): MutableList<T>? =
+    when (this) {
+        is CudaSlice<T> -> {
+            this.elements
+        }
+
+        is CudaView<T> -> {
+            if (offset == 0 && len == slice.elements.size) {
+                slice.elements
+            } else if (offset + len <= slice.elements.size) {
+                slice.elements.subList(offset, offset + len)
+            } else {
+                null
+            }
+        }
+
+        is CudaViewMut<T> -> {
+            if (offset == 0 && len == slice.elements.size) {
+                slice.elements
+            } else if (offset + len <= slice.elements.size) {
+                slice.elements.subList(offset, offset + len)
+            } else if (slice.elements.isEmpty() && offset == 0) {
+                slice.elements
+            } else {
+                null
+            }
+        }
+
+        else -> {
+            null
+        }
+    }

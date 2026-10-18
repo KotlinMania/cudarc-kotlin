@@ -2,7 +2,6 @@
 package io.github.kotlinmania.cudarc.cublas.safe
 
 import io.github.kotlinmania.cudarc.cublas.result.CublasComputeType
-import io.github.kotlinmania.cudarc.cublas.result.CublasError
 import io.github.kotlinmania.cudarc.cublas.result.CublasOperation
 import io.github.kotlinmania.cudarc.cublas.result.CudaDataType
 import io.github.kotlinmania.cudarc.cublas.result.cublasGemmGroupedBatchedEx
@@ -12,6 +11,7 @@ import kotlin.Result
 
 interface GroupedGemmDtype {
     fun dataType(): CudaDataType
+
     fun computeType(): CublasComputeType
 }
 

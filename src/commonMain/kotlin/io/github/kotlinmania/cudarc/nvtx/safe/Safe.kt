@@ -68,7 +68,9 @@ class Event(
     }
 }
 
-class Range(val id: NvtxRangeId) {
+class Range(
+    val id: NvtxRangeId,
+) {
     fun close() {
         resultRangeEnd(id)
     }

@@ -2,7 +2,6 @@
 package io.github.kotlinmania.cudarc.cudnn.safe
 
 import io.github.kotlinmania.cudarc.cudnn.result.CudnnDataType
-import io.github.kotlinmania.cudarc.cudnn.result.CudnnError
 import io.github.kotlinmania.cudarc.cudnn.result.CudnnHandle
 import io.github.kotlinmania.cudarc.cudnn.result.CudnnTensorDescriptor
 import io.github.kotlinmania.cudarc.cudnn.result.CudnnTensorFormat
@@ -20,7 +19,16 @@ import kotlin.Result
 
 interface CudnnDataTypeInfo {
     fun dataType(): CudnnDataType
+
     fun intoScalingParameter(value: Float): Float = value
+}
+
+object FloatTypeInfo : CudnnDataTypeInfo {
+    override fun dataType(): CudnnDataType = CudnnDataType.CUDNN_DATA_FLOAT
+}
+
+object DoubleTypeInfo : CudnnDataTypeInfo {
+    override fun dataType(): CudnnDataType = CudnnDataType.CUDNN_DATA_DOUBLE
 }
 
 class Cudnn(
@@ -89,7 +97,7 @@ class Cudnn(
     }
 }
 
-data class TensorDescriptor<T>(
+data class TensorDescriptor<T : CudnnDataTypeInfo>(
     val desc: CudnnTensorDescriptor,
     val handle: Cudnn,
     val typeInfo: T,

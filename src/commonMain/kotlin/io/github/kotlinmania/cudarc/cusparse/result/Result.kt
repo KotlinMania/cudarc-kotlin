@@ -4,9 +4,13 @@ package io.github.kotlinmania.cudarc.cusparse.result
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-data class CusparseHandle(val handle: Long)
+data class CusparseHandle(
+    val handle: Long,
+)
 
-enum class CusparseStatus(val code: Int) {
+enum class CusparseStatus(
+    val code: Int,
+) {
     CUSPARSE_STATUS_SUCCESS(0),
     CUSPARSE_STATUS_NOT_INITIALIZED(1),
     CUSPARSE_STATUS_ALLOC_FAILED(2),
@@ -21,7 +25,8 @@ enum class CusparseStatus(val code: Int) {
 
 data class CusparseError(
     val status: CusparseStatus,
-) : Exception("CusparseError(${status.code}, ${status.name})"), StdError
+) : Exception("CusparseError(${status.code}, ${status.name})"),
+    StdError
 
 private var nextCusparseId: Long = 1L
 

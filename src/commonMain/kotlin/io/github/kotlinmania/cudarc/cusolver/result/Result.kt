@@ -4,7 +4,9 @@ package io.github.kotlinmania.cudarc.cusolver.result
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-enum class CusolverStatus(val code: Int) {
+enum class CusolverStatus(
+    val code: Int,
+) {
     CUSOLVER_STATUS_SUCCESS(0),
     CUSOLVER_STATUS_NOT_INITIALIZED(1),
     CUSOLVER_STATUS_ALLOC_FAILED(2),
@@ -29,12 +31,24 @@ enum class CusolverStatus(val code: Int) {
 
 data class CusolverError(
     val status: CusolverStatus,
-) : Exception("CusolverError(${status.code}, ${status.name})"), StdError
+) : Exception("CusolverError(${status.code}, ${status.name})"),
+    StdError
 
-data class CusolverDnHandle(val handle: Long)
-data class CusolverDnParams(val handle: Long)
-data class CusolverSpHandle(val handle: Long)
-data class CusolverRfHandle(val handle: Long)
+data class CusolverDnHandle(
+    val handle: Long,
+)
+
+data class CusolverDnParams(
+    val handle: Long,
+)
+
+data class CusolverSpHandle(
+    val handle: Long,
+)
+
+data class CusolverRfHandle(
+    val handle: Long,
+)
 
 private var nextCusolverId: Long = 1L
 

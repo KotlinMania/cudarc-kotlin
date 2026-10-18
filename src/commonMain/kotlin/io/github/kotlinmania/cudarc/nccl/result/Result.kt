@@ -8,17 +8,24 @@ import kotlin.Result
 data class NcclError(
     val code: Int,
     val description: String = "NcclError($code)",
-) : Exception(description), StdError
+) : Exception(description),
+    StdError
 
-enum class NcclStatus(val code: Int) {
+enum class NcclStatus(
+    val code: Int,
+) {
     Success(0),
     InProgress(1),
     NumResults(2),
 }
 
-data class NcclComm(val handle: Long)
+data class NcclComm(
+    val handle: Long,
+)
 
-data class NcclUniqueId(val internal: ByteArray = ByteArray(128)) {
+data class NcclUniqueId(
+    val internal: ByteArray = ByteArray(128),
+) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is NcclUniqueId) return false
@@ -28,7 +35,9 @@ data class NcclUniqueId(val internal: ByteArray = ByteArray(128)) {
     override fun hashCode(): Int = internal.contentHashCode()
 }
 
-enum class NcclRedOp(val code: Int) {
+enum class NcclRedOp(
+    val code: Int,
+) {
     NcclSum(0),
     NcclProd(1),
     NcclMax(2),
@@ -37,7 +46,9 @@ enum class NcclRedOp(val code: Int) {
     NcclNumOps(5),
 }
 
-enum class NcclDataType(val code: Int) {
+enum class NcclDataType(
+    val code: Int,
+) {
     NcclInt8(0),
     NcclChar(0),
     NcclUint8(1),

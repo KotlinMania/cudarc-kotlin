@@ -27,8 +27,10 @@ import kotlin.Result
 
 data class DriverError(
     val result: CUresult,
-) : Exception("DriverError(${result.code}, ${result.name})"), StdError {
+) : Exception("DriverError(${result.code}, ${result.name})"),
+    StdError {
     fun errorName(): Result<String> = Result.success(result.name)
+
     fun errorString(): Result<String> = Result.success(result.description)
 }
 
@@ -47,7 +49,7 @@ private val allocations: MutableMap<ULong, ByteArray> = mutableMapOf()
 private var currentContext: CUcontext? = null
 private val deviceCount: Int = 2
 
-object device {
+object Device {
     fun get(ordinal: Int): Result<CUdevice> {
         if (ordinal < 0 || ordinal >= deviceCount) {
             return Result.failure(DriverError(CUresult.CUDA_ERROR_INVALID_DEVICE))
@@ -61,22 +63,23 @@ object device {
         Result.success(16UL * 1024UL * 1024UL * 1024UL)
 
     fun getAttribute(dev: CUdevice, attrib: CUdeviceAttribute): Result<Int> {
-        val value = when (attrib) {
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK -> 1024
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X -> 1024
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y -> 1024
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z -> 64
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X -> 2147483647
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y -> 65535
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z -> 65535
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK -> 49152
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_WARP_SIZE -> 32
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT -> 80
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR -> 8
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR -> 9
-            CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MEMORY_POOLS_SUPPORTED -> 1
-            else -> 0
-        }
+        val value =
+            when (attrib) {
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK -> 1024
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X -> 1024
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y -> 1024
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z -> 64
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X -> 2147483647
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y -> 65535
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z -> 65535
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK -> 49152
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_WARP_SIZE -> 32
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT -> 80
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR -> 8
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR -> 9
+                CUdeviceAttribute.CU_DEVICE_ATTRIBUTE_MEMORY_POOLS_SUPPORTED -> 1
+                else -> 0
+            }
         return Result.success(value)
     }
 
@@ -98,7 +101,9 @@ object device {
         Result.success(Unit)
 }
 
-object primaryCtx {
+val device: Device = Device
+
+object PrimaryCtx {
     fun retain(dev: CUdevice): Result<CUcontext> {
         val ctx = CUcontext((dev.handle + 1) * 1000L)
         currentContext = ctx
@@ -116,7 +121,9 @@ object primaryCtx {
         Result.success(Unit)
 }
 
-object ctx {
+val primaryCtx: PrimaryCtx = PrimaryCtx
+
+object Ctx {
     fun createV3(flags: UInt, dev: CUdevice): Result<CUcontext> {
         val ctx = CUcontext(nextHandle++)
         currentContext = ctx
@@ -157,16 +164,19 @@ object ctx {
     fun setCacheConfig(config: CUfuncCache): Result<Unit> = Result.success(Unit)
 }
 
-object stream {
+val ctx: Ctx = Ctx
+
+object Stream {
     enum class StreamKind {
         Default,
         NonBlocking,
         ;
 
-        fun flags(): CUstreamFlags = when (this) {
-            Default -> CUstreamFlags.CU_STREAM_DEFAULT
-            NonBlocking -> CUstreamFlags.CU_STREAM_NON_BLOCKING
-        }
+        fun flags(): CUstreamFlags =
+            when (this) {
+                Default -> CUstreamFlags.CU_STREAM_DEFAULT
+                NonBlocking -> CUstreamFlags.CU_STREAM_NON_BLOCKING
+            }
     }
 
     fun nullStream(): CUstream = CUstream.NULL
@@ -197,7 +207,9 @@ object stream {
         Result.success(CUstreamCaptureStatus.CU_STREAM_CAPTURE_STATUS_NONE)
 }
 
-object event {
+val stream: Stream = Stream
+
+object Event {
     fun create(flags: CUeventFlags = CUeventFlags.CU_EVENT_DEFAULT): Result<CUevent> =
         Result.success(CUevent(nextHandle++))
 
@@ -215,7 +227,9 @@ object event {
     fun query(event: CUevent): Result<Boolean> = Result.success(true)
 }
 
-object module {
+val event: Event = Event
+
+object Module {
     fun load(path: String): Result<CUmodule> = Result.success(CUmodule(nextHandle++))
 
     fun loadData(data: ByteArray): Result<CUmodule> = Result.success(CUmodule(nextHandle++))
@@ -226,7 +240,9 @@ object module {
         Result.success(CUfunction(nextHandle++))
 }
 
-object function {
+val module: Module = Module
+
+object Function {
     fun getFunctionAttribute(f: CUfunction, attrib: CUfunctionAttribute): Result<Int> =
         Result.success(1024)
 
@@ -250,7 +266,9 @@ object function {
     ): Result<Unit> = Result.success(Unit)
 }
 
-object occupancy {
+val function: Function = Function
+
+object Occupancy {
     fun availableDynamicSharedMemPerBlock(
         f: CUfunction,
         numBlocks: Int,
@@ -270,7 +288,9 @@ object occupancy {
     ): Result<Pair<Int, Int>> = Result.success(Pair(16, 256))
 }
 
-object memoryPools {
+val occupancy: Occupancy = Occupancy
+
+object MemoryPools {
     fun mallocFromPoolAsync(
         pool: CUmemoryPool,
         numBytes: ULong,
@@ -284,7 +304,9 @@ object memoryPools {
         Result.success(Unit)
 }
 
-object malloc {
+val memoryPools: MemoryPools = MemoryPools
+
+object Malloc {
     fun sync(numBytes: ULong): Result<CUdeviceptr> {
         val ptr = nextPtr
         nextPtr += maxOf(numBytes, 8uL)
@@ -302,10 +324,13 @@ object malloc {
     fun freeAsync(stream: CUstream, dptr: CUdeviceptr): Result<Unit> = freeSync(dptr)
 }
 
-object memcpy {
+val malloc: Malloc = Malloc
+
+object Memcpy {
     fun htodSync(dst: CUdeviceptr, src: ByteArray): Result<Unit> {
-        val buf = allocations[dst.handle]
-            ?: ByteArray(src.size).also { allocations[dst.handle] = it }
+        val buf =
+            allocations[dst.handle]
+                ?: ByteArray(src.size).also { allocations[dst.handle] = it }
         src.copyInto(buf, 0, 0, minOf(src.size, buf.size))
         return Result.success(Unit)
     }
@@ -326,8 +351,9 @@ object memcpy {
 
     fun dtodSync(dst: CUdeviceptr, src: CUdeviceptr, numBytes: ULong): Result<Unit> {
         val srcBuf = allocations[src.handle]
-        val dstBuf = allocations[dst.handle]
-            ?: ByteArray(numBytes.toInt()).also { allocations[dst.handle] = it }
+        val dstBuf =
+            allocations[dst.handle]
+                ?: ByteArray(numBytes.toInt()).also { allocations[dst.handle] = it }
         if (srcBuf != null) {
             srcBuf.copyInto(dstBuf, 0, 0, minOf(numBytes.toInt(), minOf(srcBuf.size, dstBuf.size)))
         }
@@ -341,3 +367,5 @@ object memcpy {
         stream: CUstream,
     ): Result<Unit> = dtodSync(dst, src, numBytes)
 }
+
+val memcpy: Memcpy = Memcpy

@@ -4,7 +4,9 @@ package io.github.kotlinmania.cudarc.cutensor.result
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-enum class CutensorStatus(val code: Int) {
+enum class CutensorStatus(
+    val code: Int,
+) {
     CUTENSOR_STATUS_SUCCESS(0),
     CUTENSOR_STATUS_NOT_INITIALIZED(1),
     CUTENSOR_STATUS_ALLOC_FAILED(2),
@@ -24,11 +26,18 @@ enum class CutensorStatus(val code: Int) {
 
 data class CutensorError(
     val status: CutensorStatus,
-) : Exception("CutensorError(${status.code}, ${status.name})"), StdError
+) : Exception("CutensorError(${status.code}, ${status.name})"),
+    StdError
 
-data class CutensorHandle(val handle: Long)
+data class CutensorHandle(
+    val handle: Long,
+)
 
-data class CutensorVersion(val major: Int, val minor: Int, val patch: Int)
+data class CutensorVersion(
+    val major: Int,
+    val minor: Int,
+    val patch: Int,
+)
 
 private var nextCutensorId: Long = 1L
 

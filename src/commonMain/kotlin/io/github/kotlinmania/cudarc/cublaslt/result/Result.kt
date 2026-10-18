@@ -2,17 +2,31 @@
 package io.github.kotlinmania.cudarc.cublaslt.result
 
 import io.github.kotlinmania.cudarc.cublas.result.CublasComputeType
-import io.github.kotlinmania.cudarc.cublas.result.CublasError
 import io.github.kotlinmania.cudarc.cublas.result.CublasStatus
 import io.github.kotlinmania.cudarc.cublas.result.CudaDataType
 import io.github.kotlinmania.cudarc.driver.sys.CUdeviceptr
 import kotlin.Result
 
-data class CublasLtHandle(val handle: Long)
-data class CublasLtMatrixLayout(val handle: Long)
-data class CublasLtMatmulDesc(val handle: Long)
-data class CublasLtMatmulPreference(val handle: Long)
-data class CublasLtMatmulAlgo(val data: LongArray = LongArray(8))
+data class CublasLtHandle(
+    val handle: Long,
+)
+
+data class CublasLtMatrixLayout(
+    val handle: Long,
+)
+
+data class CublasLtMatmulDesc(
+    val handle: Long,
+)
+
+data class CublasLtMatmulPreference(
+    val handle: Long,
+)
+
+data class CublasLtMatmulAlgo(
+    val data: LongArray = LongArray(8),
+)
+
 data class CublasLtMatmulHeuristicResult(
     val algo: CublasLtMatmulAlgo = CublasLtMatmulAlgo(),
     val workspaceSize: Long = 0L,
@@ -21,7 +35,9 @@ data class CublasLtMatmulHeuristicResult(
     val reserved: IntArray = IntArray(4),
 )
 
-enum class CublasLtMatrixLayoutAttribute(val code: Int) {
+enum class CublasLtMatrixLayoutAttribute(
+    val code: Int,
+) {
     CUBLASLT_MATRIX_LAYOUT_TYPE(0),
     CUBLASLT_MATRIX_LAYOUT_ORDER(1),
     CUBLASLT_MATRIX_LAYOUT_ROWS(2),
@@ -32,7 +48,9 @@ enum class CublasLtMatrixLayoutAttribute(val code: Int) {
     CUBLASLT_MATRIX_LAYOUT_PLANE_OFFSET(7),
 }
 
-enum class CublasLtMatmulDescAttributes(val code: Int) {
+enum class CublasLtMatmulDescAttributes(
+    val code: Int,
+) {
     CUBLASLT_MATMUL_DESC_COMPUTE_TYPE(0),
     CUBLASLT_MATMUL_DESC_SCALE_TYPE(1),
     CUBLASLT_MATMUL_DESC_POINTER_MODE(2),
@@ -45,7 +63,9 @@ enum class CublasLtMatmulDescAttributes(val code: Int) {
     CUBLASLT_MATMUL_DESC_BIAS_BATCH_STRIDE(9),
 }
 
-enum class CublasLtEpilogue(val code: Int) {
+enum class CublasLtEpilogue(
+    val code: Int,
+) {
     CUBLASLT_EPILOGUE_DEFAULT(1),
     CUBLASLT_EPILOGUE_RELU(2),
     CUBLASLT_EPILOGUE_RELU_AUX(3),
@@ -58,7 +78,9 @@ enum class CublasLtEpilogue(val code: Int) {
     CUBLASLT_EPILOGUE_GELU_AUX_BIAS(35),
 }
 
-enum class CublasLtMatmulPreferenceAttributes(val code: Int) {
+enum class CublasLtMatmulPreferenceAttributes(
+    val code: Int,
+) {
     CUBLASLT_MATMUL_PREF_SEARCH_MODE(0),
     CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES(1),
     CUBLASLT_MATMUL_PREF_REDUCTION_SCHEME_MASK(2),

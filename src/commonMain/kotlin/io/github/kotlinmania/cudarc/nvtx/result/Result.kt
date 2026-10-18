@@ -1,8 +1,14 @@
 // port-lint: source nvtx/result.rs
 package io.github.kotlinmania.cudarc.nvtx.result
 
-data class NvtxDomainHandle(val handle: Long)
-data class NvtxRangeId(val id: Long)
+data class NvtxDomainHandle(
+    val handle: Long,
+)
+
+data class NvtxRangeId(
+    val id: Long,
+)
+
 data class NvtxEventAttributes(
     val category: UInt = 0u,
     val colorType: Int = 0,

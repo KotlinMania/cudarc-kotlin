@@ -11,40 +11,75 @@ import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
 sealed class PtxKind {
-    data class Image(val bytes: ByteArray) : PtxKind()
-    data class Src(val src: String) : PtxKind()
-    data class File(val path: String) : PtxKind()
-    data class Binary(val data: ByteArray) : PtxKind()
+    data class Image(
+        val bytes: ByteArray,
+    ) : PtxKind()
+
+    data class Src(
+        val src: String,
+    ) : PtxKind()
+
+    data class File(
+        val path: String,
+    ) : PtxKind()
+
+    data class Binary(
+        val data: ByteArray,
+    ) : PtxKind()
 }
 
-data class Ptx(internal val kind: PtxKind) {
+data class Ptx(
+    internal val kind: PtxKind,
+) {
     companion object {
         fun fromFile(path: String): Ptx = Ptx(PtxKind.File(path))
+
         fun fromSrc(src: String): Ptx = Ptx(PtxKind.Src(src))
+
         fun fromBinary(data: ByteArray): Ptx = Ptx(PtxKind.Binary(data))
     }
 
-    fun toSrc(): String = when (kind) {
-        is PtxKind.Image -> kind.bytes.decodeToString()
-        is PtxKind.Src -> kind.src
-        is PtxKind.File -> "// File: ${kind.path}"
-        is PtxKind.Binary -> error("Cannot convert binary CUBIN data to string. Use fromSrc() or fromFile() for PTX data.")
-    }
+    fun toSrc(): String =
+        when (kind) {
+            is PtxKind.Image -> kind.bytes.decodeToString()
+            is PtxKind.Src -> kind.src
+            is PtxKind.File -> "// File: ${kind.path}"
+            is PtxKind.Binary -> error("Cannot convert binary CUBIN data to string. Use fromSrc() or fromFile() for PTX data.")
+        }
 
-    fun asBytes(): ByteArray? = when (kind) {
-        is PtxKind.Image -> kind.bytes
-        is PtxKind.Binary -> kind.data
-        else -> null
-    }
+    fun asBytes(): ByteArray? =
+        when (kind) {
+            is PtxKind.Image -> kind.bytes
+            is PtxKind.Binary -> kind.data
+            else -> null
+        }
 }
 
-sealed class CompileError(message: String) : Exception(message), StdError {
-    data class CreationError(val error: NvrtcError) : CompileError("Program creation error: $error")
-    data class CompilerError(val error: NvrtcError, val options: List<String>, val log: String) :
-        CompileError("Compilation error: $error\nLog: $log")
-    data class GetLogError(val error: NvrtcError) : CompileError("Get log error: $error")
-    data class GetPtxError(val error: NvrtcError) : CompileError("Get PTX error: $error")
-    data class DestroyError(val error: NvrtcError) : CompileError("Destroy error: $error")
+sealed class CompileError(
+    message: String,
+) : Exception(message),
+    StdError {
+    data class CreationError(
+        val error: NvrtcError,
+    ) : CompileError("Program creation error: $error")
+
+    data class CompilerError(
+        val error: NvrtcError,
+        val options: List<String>,
+        val log: String,
+    ) : CompileError("Compilation error: $error\nLog: $log")
+
+    data class GetLogError(
+        val error: NvrtcError,
+    ) : CompileError("Get log error: $error")
+
+    data class GetPtxError(
+        val error: NvrtcError,
+    ) : CompileError("Get PTX error: $error")
+
+    data class DestroyError(
+        val error: NvrtcError,
+    ) : CompileError("Destroy error: $error")
 }
 
 data class CompileOptions(
@@ -79,22 +114,25 @@ data class CompileOptions(
 fun compilePtx(src: String): Result<Ptx> = compilePtxWithOpts(src, CompileOptions())
 
 fun compilePtxWithOpts(src: String, opts: CompileOptions): Result<Ptx> {
-    val prog = createProgram(src, opts.name).getOrElse {
-        return Result.failure(CompileError.CreationError(it as NvrtcError))
-    }
+    val prog =
+        createProgram(src, opts.name).getOrElse {
+            return Result.failure(CompileError.CreationError(it as NvrtcError))
+        }
     val optionsList = opts.build()
     val compileResult = compileProgram(prog, optionsList)
     if (compileResult.isFailure) {
         val log = getProgramLog(prog).getOrDefault("Unknown error")
-        val err = compileResult.exceptionOrNull() as? NvrtcError
-            ?: NvrtcError(io.github.kotlinmania.cudarc.nvrtc.result.NvrtcResult.NVRTC_ERROR_COMPILATION)
+        val err =
+            compileResult.exceptionOrNull() as? NvrtcError
+                ?: NvrtcError(io.github.kotlinmania.cudarc.nvrtc.result.NvrtcResult.NVRTC_ERROR_COMPILATION)
         destroyProgram(prog)
         return Result.failure(CompileError.CompilerError(err, optionsList, log))
     }
-    val ptxBytes = getPtx(prog).getOrElse {
-        destroyProgram(prog)
-        return Result.failure(CompileError.GetPtxError(it as NvrtcError))
-    }
+    val ptxBytes =
+        getPtx(prog).getOrElse {
+            destroyProgram(prog)
+            return Result.failure(CompileError.GetPtxError(it as NvrtcError))
+        }
     destroyProgram(prog)
     return Result.success(Ptx(PtxKind.Image(ptxBytes)))
 }

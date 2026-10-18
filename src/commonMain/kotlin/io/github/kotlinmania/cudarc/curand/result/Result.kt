@@ -4,7 +4,10 @@ package io.github.kotlinmania.cudarc.curand.result
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-enum class CurandStatus(val code: Int, val description: String) {
+enum class CurandStatus(
+    val code: Int,
+    val description: String,
+) {
     CURAND_STATUS_SUCCESS(0, "Success"),
     CURAND_STATUS_VERSION_MISMATCH(100, "Version mismatch"),
     CURAND_STATUS_NOT_INITIALIZED(101, "Not initialized"),
@@ -33,7 +36,9 @@ enum class CurandStatus(val code: Int, val description: String) {
     }
 }
 
-enum class CurandRngType(val code: Int) {
+enum class CurandRngType(
+    val code: Int,
+) {
     CURAND_RNG_TEST(0),
     CURAND_RNG_PSEUDO_DEFAULT(100),
     CURAND_RNG_PSEUDO_XORWOW(101),
@@ -48,11 +53,14 @@ enum class CurandRngType(val code: Int) {
     CURAND_RNG_QUASI_SCRAMBLED_SOBOL64(204),
 }
 
-data class CurandGenerator(val handle: Long)
+data class CurandGenerator(
+    val handle: Long,
+)
 
 data class CurandError(
     val status: CurandStatus,
-) : Exception("CurandError(${status.code}, ${status.name})"), StdError
+) : Exception("CurandError(${status.code}, ${status.name})"),
+    StdError
 
 private var nextGenId: Long = 1L
 private val generatorSeeds: MutableMap<Long, ULong> = mutableMapOf()

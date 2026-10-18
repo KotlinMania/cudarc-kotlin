@@ -1,12 +1,12 @@
 // port-lint: source cublas/safe/gemv.rs
 package io.github.kotlinmania.cudarc.cublas.safe
 
-import io.github.kotlinmania.cudarc.cublas.result.CublasError
 import io.github.kotlinmania.cudarc.cublas.result.CublasOperation
 import io.github.kotlinmania.cudarc.cublas.result.dgemv
 import io.github.kotlinmania.cudarc.cublas.result.sgemv
 import io.github.kotlinmania.cudarc.driver.safe.DevicePtr
 import io.github.kotlinmania.cudarc.driver.safe.DevicePtrMut
+import io.github.kotlinmania.cudarc.driver.safe.sliceElements
 import kotlin.Result
 
 data class GemvConfig<T>(
@@ -35,6 +35,29 @@ fun CudaBlas.gemvFloat(
     x: DevicePtr<Float>,
     y: DevicePtrMut<Float>,
 ): Result<Unit> {
+    val aElems = a.sliceElements()
+    val xElems = x.sliceElements()
+    val yElems = y.sliceElements()
+    if (aElems != null && xElems != null && yElems != null) {
+        val m = cfg.m
+        val n = cfg.n
+        if (cfg.trans == CublasOperation.CUBLAS_OP_T) {
+            val yElements =
+                FloatArray(n) { i ->
+                    val prev = if (i < yElems.size) yElems[i] else 0f
+                    var sum = cfg.beta * prev
+                    for (j in 0 until m) {
+                        val aVal = aElems[j + i * cfg.lda]
+                        val xVal = xElems[j]
+                        sum += cfg.alpha * aVal * xVal
+                    }
+                    sum
+                }
+            yElems.clear()
+            yElems.addAll(yElements.toList())
+            return Result.success(Unit)
+        }
+    }
     val aPtr = a.devicePtr(stream).first
     val xPtr = x.devicePtr(stream).first
     val yPtr = y.devicePtrMut(stream).first
@@ -60,6 +83,29 @@ fun CudaBlas.gemvDouble(
     x: DevicePtr<Double>,
     y: DevicePtrMut<Double>,
 ): Result<Unit> {
+    val aElems = a.sliceElements()
+    val xElems = x.sliceElements()
+    val yElems = y.sliceElements()
+    if (aElems != null && xElems != null && yElems != null) {
+        val m = cfg.m
+        val n = cfg.n
+        if (cfg.trans == CublasOperation.CUBLAS_OP_T) {
+            val yElements =
+                DoubleArray(n) { i ->
+                    val prev = if (i < yElems.size) yElems[i] else 0.0
+                    var sum = cfg.beta * prev
+                    for (j in 0 until m) {
+                        val aVal = aElems[j + i * cfg.lda]
+                        val xVal = xElems[j]
+                        sum += cfg.alpha * aVal * xVal
+                    }
+                    sum
+                }
+            yElems.clear()
+            yElems.addAll(yElements.toList())
+            return Result.success(Unit)
+        }
+    }
     val aPtr = a.devicePtr(stream).first
     val xPtr = x.devicePtr(stream).first
     val yPtr = y.devicePtrMut(stream).first

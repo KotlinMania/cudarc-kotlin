@@ -4,7 +4,9 @@ package io.github.kotlinmania.cudarc.cufile.result
 import io.github.kotlinmania.thiserror.StdError
 import kotlin.Result
 
-enum class CufileOpError(val code: Int) {
+enum class CufileOpError(
+    val code: Int,
+) {
     CU_FILE_SUCCESS(0),
     CU_FILE_DRIVER_NOT_INITIALIZED(1),
     CU_FILE_DRIVER_INVALID_PROPS(2),
@@ -33,7 +35,8 @@ enum class CufileOpError(val code: Int) {
 
 data class CufileError(
     val error: CufileOpError,
-) : Exception("CufileError(${error.code}, ${error.name})"), StdError
+) : Exception("CufileError(${error.code}, ${error.name})"),
+    StdError
 
 fun driverOpen(): Result<Unit> = Result.success(Unit)
 

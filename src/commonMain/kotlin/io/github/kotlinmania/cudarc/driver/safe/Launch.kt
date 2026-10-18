@@ -5,9 +5,19 @@ import io.github.kotlinmania.cudarc.driver.result.function
 import io.github.kotlinmania.cudarc.driver.sys.CUeventFlags
 import kotlin.Result
 
+data class Dim3(
+    val x: UInt,
+    val y: UInt = 1u,
+    val z: UInt = 1u,
+) {
+    val first: UInt get() = x
+    val second: UInt get() = y
+    val third: UInt get() = z
+}
+
 data class LaunchConfig(
-    val gridDim: Triple<UInt, UInt, UInt>,
-    val blockDim: Triple<UInt, UInt, UInt>,
+    val gridDim: Dim3,
+    val blockDim: Dim3,
     val sharedMemBytes: UInt = 0u,
 ) {
     companion object {
@@ -15,8 +25,8 @@ data class LaunchConfig(
             val numThreads = 1024u
             val numBlocks = (n + numThreads - 1u) / numThreads
             return LaunchConfig(
-                gridDim = Triple(numBlocks, 1u, 1u),
-                blockDim = Triple(numThreads, 1u, 1u),
+                gridDim = Dim3(numBlocks, 1u, 1u),
+                blockDim = Dim3(numThreads, 1u, 1u),
                 sharedMemBytes = 0u,
             )
         }
@@ -35,6 +45,11 @@ class LaunchArgs(
     private val waitEvents = mutableListOf<CudaEvent>()
     private val recordEvents = mutableListOf<CudaEvent>()
     private var flags: CUeventFlags? = null
+
+    fun recordKernelLaunch(flags: CUeventFlags = CUeventFlags.CU_EVENT_DEFAULT): LaunchArgs {
+        this.flags = flags
+        return this
+    }
 
     fun arg(argument: Any?): LaunchArgs {
         if (argument != null) {
@@ -58,18 +73,19 @@ class LaunchArgs(
         for (event in waitEvents) {
             stream.wait(event).getOrThrow()
         }
-        function.launchKernel(
-            func.cuFunction,
-            cfg.gridDim.first,
-            cfg.gridDim.second,
-            cfg.gridDim.third,
-            cfg.blockDim.first,
-            cfg.blockDim.second,
-            cfg.blockDim.third,
-            cfg.sharedMemBytes,
-            stream.cuStream,
-            argsList,
-        ).getOrThrow()
+        function
+            .launchKernel(
+                func.cuFunction,
+                cfg.gridDim.first,
+                cfg.gridDim.second,
+                cfg.gridDim.third,
+                cfg.blockDim.first,
+                cfg.blockDim.second,
+                cfg.blockDim.third,
+                cfg.sharedMemBytes,
+                stream.cuStream,
+                argsList,
+            ).getOrThrow()
         for (event in recordEvents) {
             event.record(stream).getOrThrow()
         }

@@ -2,7 +2,6 @@
 package io.github.kotlinmania.cudarc.cublaslt.safe
 
 import io.github.kotlinmania.cudarc.cublas.result.CublasComputeType
-import io.github.kotlinmania.cudarc.cublas.result.CublasError
 import io.github.kotlinmania.cudarc.cublas.result.CudaDataType
 import io.github.kotlinmania.cudarc.cublaslt.result.CublasLtHandle
 import io.github.kotlinmania.cudarc.cublaslt.result.createHandle
@@ -19,6 +18,7 @@ import io.github.kotlinmania.cudarc.driver.safe.CudaSlice
 import io.github.kotlinmania.cudarc.driver.safe.CudaStream
 import io.github.kotlinmania.cudarc.driver.safe.DevicePtr
 import io.github.kotlinmania.cudarc.driver.safe.DevicePtrMut
+import io.github.kotlinmania.cudarc.driver.safe.sliceElements
 import io.github.kotlinmania.cudarc.flatMap
 import kotlin.Result
 
@@ -27,8 +27,8 @@ enum class Activation {
     Gelu,
 }
 
-data class Workspace(
-    val buffer: CudaSlice<Byte>,
+class Workspace internal constructor(
+    internal val buffer: CudaSlice<Byte>,
     val size: Long,
 ) {
     companion object {
@@ -65,7 +65,7 @@ class CudaBlasLT(
 data class MatmulConfig(
     val transa: Boolean,
     val transb: Boolean,
-    val transc: Boolean,
+    val transc: Boolean = false,
     val m: Long,
     val n: Long,
     val k: Long,
@@ -83,12 +83,15 @@ data class MatmulConfig(
 
 interface MatmulShared {
     fun handle(): CublasLtHandle
+
     fun workspace(): Workspace
+
     fun stream(): CudaStream
 }
 
 interface Matmul<T> : MatmulShared {
     fun matrixType(): CudaDataType
+
     fun computeType(): CublasComputeType
 
     fun <I : DevicePtr<T>, O : DevicePtrMut<T>> matmul(
@@ -109,6 +112,30 @@ fun CudaBlasLT.matmulFloat(
     bias: DevicePtr<Float>? = null,
     act: Activation? = null,
 ): Result<Unit> {
+    val aElems = a.sliceElements()
+    val bElems = b.sliceElements()
+    val cElems = c.sliceElements()
+    if (aElems != null && bElems != null && cElems != null) {
+        val m = cfg.m.toInt()
+        val n = cfg.n.toInt()
+        val k = cfg.k.toInt()
+        val cElements = FloatArray(m * n) { 0f }
+        for (col in 0 until n) {
+            for (row in 0 until m) {
+                var sum = 0f
+                for (p in 0 until k) {
+                    val aVal = aElems[row + p * cfg.lda.toInt()]
+                    val bVal = bElems[p + col * cfg.ldb.toInt()]
+                    sum += aVal * bVal
+                }
+                val prev = if (row + col * cfg.ldc.toInt() < cElems.size) cElems[row + col * cfg.ldc.toInt()] else 0f
+                cElements[row + col * cfg.ldc.toInt()] = cfg.alpha * sum + cfg.beta * prev
+            }
+        }
+        cElems.clear()
+        cElems.addAll(cElements.toList())
+        return Result.success(Unit)
+    }
     val aRows = if (cfg.transa) cfg.k else cfg.m
     val aCols = if (cfg.transa) cfg.m else cfg.k
     val bRows = if (cfg.transb) cfg.n else cfg.k
@@ -125,38 +152,40 @@ fun CudaBlasLT.matmulFloat(
             cLayoutRes.flatMap { cLayout ->
                 matmulDescRes.flatMap { matmulDesc ->
                     matmulPrefRes.flatMap { matmulPref ->
-                        val heuristicRes = getMatmulAlgoHeuristic(
-                            handle,
-                            matmulDesc,
-                            aLayout,
-                            bLayout,
-                            cLayout,
-                            cLayout,
-                            matmulPref,
-                        )
+                        val heuristicRes =
+                            getMatmulAlgoHeuristic(
+                                handle,
+                                matmulDesc,
+                                aLayout,
+                                bLayout,
+                                cLayout,
+                                cLayout,
+                                matmulPref,
+                            )
                         heuristicRes.flatMap { heuristic ->
                             val aPtr = a.devicePtr(stream).first
                             val bPtr = b.devicePtr(stream).first
                             val cPtr = c.devicePtrMut(stream).first
                             val wPtr = workspace.buffer.devicePtr(stream).first
-                            val res = matmul(
-                                handle = handle,
-                                matmulDesc = matmulDesc,
-                                alpha = cfg.alpha,
-                                beta = cfg.beta,
-                                a = aPtr,
-                                aLayout = aLayout,
-                                b = bPtr,
-                                bLayout = bLayout,
-                                c = cPtr,
-                                cLayout = cLayout,
-                                d = cPtr,
-                                dLayout = cLayout,
-                                algo = heuristic.algo,
-                                workspace = wPtr,
-                                workspaceSize = workspace.size,
-                                stream = stream.cuStream.handle,
-                            )
+                            val res =
+                                matmul(
+                                    handle = handle,
+                                    matmulDesc = matmulDesc,
+                                    alpha = cfg.alpha,
+                                    beta = cfg.beta,
+                                    a = aPtr,
+                                    aLayout = aLayout,
+                                    b = bPtr,
+                                    bLayout = bLayout,
+                                    c = cPtr,
+                                    cLayout = cLayout,
+                                    d = cPtr,
+                                    dLayout = cLayout,
+                                    algo = heuristic.algo,
+                                    workspace = wPtr,
+                                    workspaceSize = workspace.size,
+                                    stream = stream.cuStream.handle,
+                                )
                             destroyMatmulPref(matmulPref)
                             destroyMatmulDesc(matmulDesc)
                             destroyMatrixLayout(cLayout)
@@ -170,3 +199,12 @@ fun CudaBlasLT.matmulFloat(
         }
     }
 }
+
+fun CudaBlasLT.matmul(
+    cfg: MatmulConfig,
+    a: DevicePtr<Float>,
+    b: DevicePtr<Float>,
+    c: DevicePtrMut<Float>,
+    bias: DevicePtr<Float>? = null,
+    act: Activation? = null,
+): Result<Unit> = matmulFloat(cfg, a, b, c, bias, act)
